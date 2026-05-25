@@ -15,10 +15,10 @@ A CLI that scans a project and generates best-practice `.claude/` configuration 
 
 Generated configuration is tailored to the detected stack:
 
-- `CLAUDE.md` with project overview, commands, conventions, testing, environment notes
-- `settings.json` with safe permissions and project-local hooks
+- `CLAUDE.md` with project overview, commands, conventions, testing, environment notes, and [Karpathy behavioral guidelines](https://github.com/multica-ai/andrej-karpathy-skills)
+- `settings.json` with safe permissions and project-local hooks (valid [ECC](https://github.com/affaan-m/ECC) hook schema)
 - Subagents for review, security, testing, database, accessibility, and language-specific review
-- Skills for API scaffolding, migrations, and components where relevant
+- Universal skills (tdd, debug, refactor, code-review, plan) for all stacks, plus framework-specific skills (API scaffolding, migrations, components) where relevant
 - Slash commands for dev, test, and check workflows
 
 ## Usage
@@ -90,3 +90,8 @@ Run locally:
 ```bash
 node bin/cc-init.js --dry-run --yes
 ```
+
+## Referenced projects
+
+- **[Andrej Karpathy Skills](https://github.com/multica-ai/andrej-karpathy-skills)** — Four behavioral principles (Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution) included in every generated `CLAUDE.md`.
+- **[ECC (Enhanced Claude Code)](https://github.com/affaan-m/ECC)** — Agent harness providing 60 agents, 232 skills, 75+ commands, and 19 rule sets. The generated hook schema, skills structure, and agent patterns follow ECC conventions.

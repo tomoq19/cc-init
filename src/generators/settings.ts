@@ -1,17 +1,21 @@
 import type { StackProfile, GeneratedFile } from '../types.js';
 
-interface Hook {
-  matcher: string;
+interface CommandHook {
+  type: 'command';
   command: string;
-  description: string;
+}
+
+interface HookEntry {
+  matcher?: string;
+  hooks: CommandHook[];
 }
 
 interface Settings {
   permissions: { allow: string[]; deny: string[] };
   hooks: {
-    PreToolUse: Hook[];
-    PostToolUse: Hook[];
-    Stop: StopHook[];
+    PreToolUse: HookEntry[];
+    PostToolUse: HookEntry[];
+    Stop: HookEntry[];
   };
   mcpServers: Record<string, unknown>;
 }
@@ -53,8 +57,8 @@ function buildPermissions(profile: StackProfile): string[] {
   return allow;
 }
 
-function buildPostToolUseHooks(profile: StackProfile): Hook[] {
-  const hooks: Hook[] = [];
+function buildPostToolUseHooks(profile: StackProfile): HookEntry[] {
+  const entries: HookEntry[] = [];
   const pm = profile.packageManager;
 
   if (profile.detectedTools.formatter) {
@@ -77,7 +81,7 @@ function buildPostToolUseHooks(profile: StackProfile): Hook[] {
     } else {
       cmd = `${formatter} "$FILE_PATH"`;
     }
-    hooks.push({ matcher: 'Write|Edit', command: cmd, description: `Format with ${formatter}` });
+    entries.push({ matcher: 'Write|Edit', hooks: [{ type: 'command', command: cmd }] });
   }
 
   if (profile.detectedTools.linter) {
@@ -100,50 +104,46 @@ function buildPostToolUseHooks(profile: StackProfile): Hook[] {
     } else {
       cmd = `${linter} "$FILE_PATH"`;
     }
-    hooks.push({ matcher: 'Write|Edit', command: cmd, description: `Lint with ${linter}` });
+    entries.push({ matcher: 'Write|Edit', hooks: [{ type: 'command', command: cmd }] });
   }
 
   if (profile.detectedTools.typeChecker === 'tsc') {
-    hooks.push({
+    entries.push({
       matcher: 'Write|Edit',
-      command: `timeout 60 ${pm} tsc --noEmit --pretty false --incremental --tsBuildInfoFile node_modules/.cache/tsc-hook.tsbuildinfo`,
-      description: 'Type-check (incremental + timeout-capped)',
+      hooks: [{ type: 'command', command: `timeout 60 ${pm} tsc --noEmit --pretty false --incremental --tsBuildInfoFile node_modules/.cache/tsc-hook.tsbuildinfo` }],
     });
   }
 
-  return hooks;
+  return entries;
 }
 
-function buildPreToolUseHooks(): Hook[] {
+function buildPreToolUseHooks(): HookEntry[] {
   return [
     {
       matcher: 'Write',
-      command: `node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const c=i.tool_input?.content||'';const lines=c.split('\\\\n').length;if(lines>800){console.error('[Hook] BLOCKED: File exceeds 800 lines ('+lines+' lines)');console.error('[Hook] Split into smaller modules');process.exit(2)}console.log(d)})"`,
-      description: 'Block writes that exceed 800 lines',
+      hooks: [{
+        type: 'command',
+        command: `node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const c=i.tool_input?.content||'';const lines=c.split('\\\\n').length;if(lines>800){console.error('[Hook] BLOCKED: File exceeds 800 lines ('+lines+' lines)');console.error('[Hook] Split into smaller modules');process.exit(2)}console.log(d)})"`,
+      }],
     },
   ];
 }
 
-interface StopHook {
-  command: string;
-  description: string;
-}
-
-function buildStopHooks(profile: StackProfile): StopHook[] {
+function buildStopHooks(profile: StackProfile): HookEntry[] {
   const pm = profile.packageManager;
-  const hooks: StopHook[] = [];
+  const entries: HookEntry[] = [];
 
   if (['pnpm', 'npm', 'yarn', 'bun'].includes(pm)) {
-    hooks.push({ command: `${pm} build`, description: 'Verify production build at session end' });
+    entries.push({ hooks: [{ type: 'command', command: `${pm} build` }] });
   } else if (pm === 'cargo') {
-    hooks.push({ command: 'cargo build', description: 'Verify build at session end' });
+    entries.push({ hooks: [{ type: 'command', command: 'cargo build' }] });
   } else if (pm === 'go') {
-    hooks.push({ command: 'go build ./...', description: 'Verify build at session end' });
+    entries.push({ hooks: [{ type: 'command', command: 'go build ./...' }] });
   } else if (pm === 'gradle') {
-    hooks.push({ command: './gradlew build', description: 'Verify build at session end' });
+    entries.push({ hooks: [{ type: 'command', command: './gradlew build' }] });
   }
 
-  return hooks;
+  return entries;
 }
 
 export function generateSettings(profile: StackProfile): GeneratedFile {
@@ -167,9 +167,7 @@ export function generateSettings(profile: StackProfile): GeneratedFile {
   const cleanHooks: Record<string, unknown> = {};
   if (settings.hooks.PreToolUse.length > 0) cleanHooks.PreToolUse = settings.hooks.PreToolUse;
   if (settings.hooks.PostToolUse.length > 0) cleanHooks.PostToolUse = settings.hooks.PostToolUse;
-  if (settings.hooks.Stop.length > 0) {
-    cleanHooks.Stop = settings.hooks.Stop.map(({ command, description }) => ({ command, description }));
-  }
+  if (settings.hooks.Stop.length > 0) cleanHooks.Stop = settings.hooks.Stop;
   if (Object.keys(cleanHooks).length > 0) cleanSettings.hooks = cleanHooks;
 
   return {

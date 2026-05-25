@@ -35,8 +35,8 @@ describe('generators', () => {
     expect(parsed.permissions.allow).toContain('Bash(pnpm test)');
     expect(parsed.hooks.PostToolUse).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ command: 'pnpm prettier --write "$FILE_PATH"' }),
-        expect.objectContaining({ command: 'pnpm eslint --fix "$FILE_PATH"' }),
+        expect.objectContaining({ matcher: 'Write|Edit', hooks: [{ type: 'command', command: 'pnpm prettier --write "$FILE_PATH"' }] }),
+        expect.objectContaining({ matcher: 'Write|Edit', hooks: [{ type: 'command', command: 'pnpm eslint --fix "$FILE_PATH"' }] }),
       ])
     );
   });
@@ -49,6 +49,11 @@ describe('generators', () => {
     expect(file.content).toContain('typescript');
     expect(file.content).toContain('pnpm test');
     expect(file.content).toContain('vitest');
+    expect(file.content).toContain('Behavioral Guidelines');
+    expect(file.content).toContain('Think Before Coding');
+    expect(file.content).toContain('Simplicity First');
+    expect(file.content).toContain('Surgical Changes');
+    expect(file.content).toContain('Goal-Driven Execution');
   });
 
   it('generates universal and conditional agents', () => {
@@ -67,6 +72,11 @@ describe('generators', () => {
     const files = generateSkills(nextProfile());
     const paths = files.map(f => f.path);
 
+    expect(paths).toContain('.claude/skills/tdd.md');
+    expect(paths).toContain('.claude/skills/debug.md');
+    expect(paths).toContain('.claude/skills/refactor.md');
+    expect(paths).toContain('.claude/skills/code-review.md');
+    expect(paths).toContain('.claude/skills/plan.md');
     expect(paths).toContain('.claude/skills/migrate.md');
     expect(paths).toContain('.claude/skills/component.md');
   });
@@ -92,9 +102,15 @@ describe('generators', () => {
     expect(paths).toContain('.claude/commands/check.md');
   });
 
-  it('does not generate skills for unsupported stack', () => {
+  it('generates universal skills for any stack', () => {
     const files = generateSkills({ ...emptyStackProfile(), language: 'go', packageManager: 'go' });
+    const paths = files.map(f => f.path);
 
-    expect(files).toHaveLength(0);
+    expect(paths).toContain('.claude/skills/tdd.md');
+    expect(paths).toContain('.claude/skills/debug.md');
+    expect(paths).toContain('.claude/skills/refactor.md');
+    expect(paths).toContain('.claude/skills/code-review.md');
+    expect(paths).toContain('.claude/skills/plan.md');
+    expect(files.find(f => f.path === '.claude/skills/tdd.md')!.content).toContain('go test ./...');
   });
 });
