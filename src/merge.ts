@@ -92,7 +92,9 @@ export async function mergeClaudeMd(
   projectDir: string,
   generated: string,
 ): Promise<string> {
-  const existingPath = join(projectDir, '.claude', 'CLAUDE.md');
+  const rootPath = join(projectDir, 'CLAUDE.md');
+  const legacyPath = join(projectDir, '.claude', 'CLAUDE.md');
+  const existingPath = (await fileExists(rootPath)) ? rootPath : legacyPath;
   if (!(await fileExists(existingPath))) return generated;
 
   try {

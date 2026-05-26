@@ -44,7 +44,7 @@ describe('generators', () => {
   it('generates CLAUDE.md with detected stack', () => {
     const file = generateClaudeMd(nextProfile());
 
-    expect(file.path).toBe('.claude/CLAUDE.md');
+    expect(file.path).toBe('CLAUDE.md');
     expect(file.content).toContain('nextjs');
     expect(file.content).toContain('typescript');
     expect(file.content).toContain('pnpm test');
@@ -100,6 +100,25 @@ describe('generators', () => {
     expect(paths).toContain('.claude/commands/dev.md');
     expect(paths).toContain('.claude/commands/test.md');
     expect(paths).toContain('.claude/commands/check.md');
+  });
+
+  it('uses npx for npm hooks instead of npm <binary>', () => {
+    const npmProfile: StackProfile = {
+      ...emptyStackProfile(),
+      language: 'typescript',
+      packageManager: 'npm',
+      detectedTools: { formatter: 'prettier', linter: 'eslint', typeChecker: 'tsc', bundler: null },
+    };
+    const file = generateSettings(npmProfile);
+    const parsed = JSON.parse(file.content);
+    const postHookCmds = parsed.hooks.PostToolUse.flatMap((e: { hooks: { command: string }[] }) => e.hooks.map((h: { command: string }) => h.command));
+    const stopHookCmds = parsed.hooks.Stop.flatMap((e: { hooks: { command: string }[] }) => e.hooks.map((h: { command: string }) => h.command));
+
+    expect(postHookCmds).toContain('npx prettier --write "$FILE_PATH"');
+    expect(postHookCmds).toContain('npx eslint --fix "$FILE_PATH"');
+    expect(postHookCmds.find((c: string) => c.includes('tsc'))).toContain('npx tsc');
+    expect(stopHookCmds).toContain('npm run build');
+    expect(postHookCmds.every((c: string) => !c.startsWith('npm '))).toBe(true);
   });
 
   it('generates universal skills for any stack', () => {

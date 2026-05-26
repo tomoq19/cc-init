@@ -25,8 +25,9 @@ function buildPermissions(profile: StackProfile): string[] {
   const pm = profile.packageManager;
 
   if (['pnpm', 'npm', 'yarn', 'bun'].includes(pm)) {
-    allow.push(`Bash(${pm} test)`, `Bash(${pm} lint)`, `Bash(${pm} build)`);
-    allow.push(`Bash(${pm} run typecheck)`, `Bash(${pm} run dev)`);
+    const runScript = (script: string) => pm === 'npm' ? `npm run ${script}` : `${pm} ${script}`;
+    allow.push(`Bash(${runScript('test')})`, `Bash(${runScript('lint')})`, `Bash(${runScript('build')})`);
+    allow.push(`Bash(${pm} run typecheck)`, `Bash(${runScript('dev')})`);
   } else if (pm === 'poetry') {
     allow.push('Bash(poetry run pytest)', 'Bash(poetry run ruff check .)', 'Bash(poetry run ruff format .)');
   } else if (pm === 'go') {
@@ -63,12 +64,13 @@ function buildPostToolUseHooks(profile: StackProfile): HookEntry[] {
 
   if (profile.detectedTools.formatter) {
     const formatter = profile.detectedTools.formatter;
+    const npx = pm === 'npm' ? 'npx' : pm;
     let cmd: string;
     if (['pnpm', 'npm', 'yarn', 'bun'].includes(pm)) {
       if (formatter === 'biome') {
-        cmd = `${pm} biome format --write "$FILE_PATH"`;
+        cmd = `${npx} biome format --write "$FILE_PATH"`;
       } else {
-        cmd = `${pm} prettier --write "$FILE_PATH"`;
+        cmd = `${npx} prettier --write "$FILE_PATH"`;
       }
     } else if (pm === 'poetry') {
       cmd = `poetry run ${formatter} "$FILE_PATH"`;
@@ -86,12 +88,13 @@ function buildPostToolUseHooks(profile: StackProfile): HookEntry[] {
 
   if (profile.detectedTools.linter) {
     const linter = profile.detectedTools.linter;
+    const npx = pm === 'npm' ? 'npx' : pm;
     let cmd: string;
     if (['pnpm', 'npm', 'yarn', 'bun'].includes(pm)) {
       if (linter === 'biome') {
-        cmd = `${pm} biome lint --write "$FILE_PATH"`;
+        cmd = `${npx} biome lint --write "$FILE_PATH"`;
       } else {
-        cmd = `${pm} eslint --fix "$FILE_PATH"`;
+        cmd = `${npx} eslint --fix "$FILE_PATH"`;
       }
     } else if (pm === 'poetry') {
       cmd = `poetry run ${linter} check --fix "$FILE_PATH"`;
@@ -108,9 +111,10 @@ function buildPostToolUseHooks(profile: StackProfile): HookEntry[] {
   }
 
   if (profile.detectedTools.typeChecker === 'tsc') {
+    const npx = pm === 'npm' ? 'npx' : pm;
     entries.push({
       matcher: 'Write|Edit',
-      hooks: [{ type: 'command', command: `timeout 60 ${pm} tsc --noEmit --pretty false --incremental --tsBuildInfoFile node_modules/.cache/tsc-hook.tsbuildinfo` }],
+      hooks: [{ type: 'command', command: `timeout 60 ${npx} tsc --noEmit --pretty false --incremental --tsBuildInfoFile node_modules/.cache/tsc-hook.tsbuildinfo` }],
     });
   }
 
@@ -134,7 +138,7 @@ function buildStopHooks(profile: StackProfile): HookEntry[] {
   const entries: HookEntry[] = [];
 
   if (['pnpm', 'npm', 'yarn', 'bun'].includes(pm)) {
-    entries.push({ hooks: [{ type: 'command', command: `${pm} build` }] });
+    entries.push({ hooks: [{ type: 'command', command: `${pm} run build` }] });
   } else if (pm === 'cargo') {
     entries.push({ hooks: [{ type: 'command', command: 'cargo build' }] });
   } else if (pm === 'go') {

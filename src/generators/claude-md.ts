@@ -22,10 +22,11 @@ function buildKeyCommands(profile: StackProfile): string {
   const commands: Array<[string, string]> = [];
 
   if (['pnpm', 'npm', 'yarn', 'bun'].includes(pm)) {
-    commands.push(['Dev server', `${pm} dev`]);
-    commands.push(['Build', `${pm} build`]);
-    commands.push(['Test', `${pm} test`]);
-    commands.push(['Lint', `${pm} lint`]);
+    const runScript = (script: string) => pm === 'npm' ? `npm run ${script}` : `${pm} ${script}`;
+    commands.push(['Dev server', runScript('dev')]);
+    commands.push(['Build', runScript('build')]);
+    commands.push(['Test', runScript('test')]);
+    commands.push(['Lint', runScript('lint')]);
     if (profile.detectedTools.typeChecker) {
       commands.push(['Type check', `${pm} run typecheck`]);
     }
@@ -193,7 +194,7 @@ export function generateClaudeMd(profile: StackProfile): GeneratedFile {
   sections.push(BEHAVIORAL_GUIDELINES);
 
   return {
-    path: '.claude/CLAUDE.md',
+    path: 'CLAUDE.md',
     content: sections.join('\n\n') + '\n',
   };
 }

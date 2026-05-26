@@ -57,7 +57,7 @@ describe('CLI e2e', () => {
     await execFileAsync('node', [BIN, dir, '--yes', '--force']);
 
     const settings = JSON.parse(await readFile(join(dir, '.claude', 'settings.json'), 'utf-8'));
-    const claude = await readFile(join(dir, '.claude', 'CLAUDE.md'), 'utf-8');
+    const claude = await readFile(join(dir, 'CLAUDE.md'), 'utf-8');
     const reviewer = await readFile(join(dir, '.claude', 'agents', 'reviewer.md'), 'utf-8');
 
     expect(settings.permissions.allow).toContain('Bash(pnpm test)');

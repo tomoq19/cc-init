@@ -56,7 +56,7 @@ export async function generateAll(
           ...file,
           content: await mergeSettingsJson(projectDir, file.content),
         };
-      } else if (file.path === '.claude/CLAUDE.md') {
+      } else if (file.path === 'CLAUDE.md') {
         filesToWrite[i] = {
           ...file,
           content: await mergeClaudeMd(projectDir, file.content),
